@@ -9,79 +9,54 @@ from datetime import datetime
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Token
-TOKEN = '7392721590:AAEF_tvf1kp3sXyqIr8xUThXnGsSh5PC_SY'
+TOKEN = '7392721590:AAEF_tvf1kp3sXyqIr8xUThXnGsSh5PC_SY'  # <<<< BU YERGA O'Z TOKENINGIZNI QO'YING
 
-# Department passwords
-PASSWORDS = {
-    '02': '1985',
-    '16': '1979',
-    '15': '1974',
-    '07': '1986',
-    '05': '1980',
-    '06': '1985',
-    '03': '1976',
-    '10': '1988',
-    '19': '1984',
-    '09': '1986',
-    '13': '1973',
-    '11': '1968',
-    '08': '1985',
-    '04': '1989',
-    '12': '1973',
-    '01': '1979',
-    '14': '1987',
-    '18': '1988',
-    '20': '1979',
-    '17': '1992'
-}
-
-# Steps
-ENTER_DEPARTMENT, ENTER_PASSWORD, SELECT_PERSON, SELECT_ORGANIZATION = range(4)
-
-# Data list
-data = []
-
-# File path for current_number
+# Fayl nomi
 NUMBER_FILE = 'current_number.txt'
 
-# Load current_number from file
-def load_current_number():
-    if os.path.exists(NUMBER_FILE):
-        with open(NUMBER_FILE, 'r') as file:
-            return int(file.read().strip())
-    return 650  # Default start value
-
-# Save current_number to file
-def save_current_number(number):
-    with open(NUMBER_FILE, 'w') as file:
-        file.write(str(number))
-
-current_number = load_current_number()
-
-department_state = {
-    '02': 7,
-    '01': 12,
-    '16': 6,
-    '15': 6,
-    '07': 6,
-    '05': 6,
-    '06': 6,
-    '03': 6,
-    '10': 6,
-    '19': 6,
-    '09': 6,
-    '13': 6,
-    '11': 6,
-    '08': 6,
-    '04': 6,
-    '12': 6,
-    '14': 6,
-    '18': 6,
-    '20': 6,
-    '17': 6
+# Parollar
+PASSWORDS = {
+    '02': '1985', '16': '1979', '15': '1974', '07': '1986', '05': '1980',
+    '06': '1985', '03': '1976', '10': '1988', '19': '1984', '09': '1986',
+    '13': '1973', '11': '1968', '08': '1985', '04': '1989', '12': '1973',
+    '01': '1979', '14': '1987', '18': '1988', '20': '1979', '17': '1992'
 }
 
-# Define functions
+# States
+ENTER_DEPARTMENT, ENTER_PASSWORD, SELECT_PERSON, SELECT_ORGANIZATION = range(4)
+
+# Saqlanadigan ma’lumot
+data = []
+
+# Departamentlar tashkilot turi uchun offset
+department_state = {key: 6 if key != '02' else 7 for key in PASSWORDS.keys()}
+
+# --- Fayl orqali current_number boshqaruvi ---
+def load_current_number():
+    try:
+        if os.path.exists(NUMBER_FILE):
+            with open(NUMBER_FILE, 'r') as file:
+                content = file.read().strip()
+                if content.isdigit():
+                    return int(content)
+        with open(NUMBER_FILE, 'w') as file:
+            file.write('650')
+        return 650
+    except Exception as e:
+        logging.error(f"Raqamni o‘qishda xatolik: {e}")
+        return 650
+
+def save_current_number(number):
+    try:
+        with open(NUMBER_FILE, 'w') as file:
+            file.write(str(number))
+    except Exception as e:
+        logging.error(f"Raqamni saqlashda xatolik: {e}")
+
+# Dastlabki raqam yuklanadi
+current_number = load_current_number()
+
+# --- Bot funksiyalari ---
 def start(update, context):
     keyboard = [
         [InlineKeyboardButton("1-Svodniy", callback_data='02')],
@@ -112,7 +87,7 @@ def start(update, context):
 def enter_department(update, context):
     query = update.callback_query
     context.user_data['department'] = query.data
-    query.message.reply_text(f"{query.data.capitalize()} bo'limi uchun parolni kiriting:")
+    query.message.reply_text(f"{query.data} bo'limi uchun parolni kiriting:")
     return ENTER_PASSWORD
 
 def enter_password(update, context):
@@ -127,17 +102,17 @@ def enter_password(update, context):
         update.message.reply_text('Imzolovchini tanlang:', reply_markup=reply_markup)
         return SELECT_PERSON
     else:
-        update.message.reply_text('Noto\'g\'ri parol. Qayta urinib ko\'ring:')
+        update.message.reply_text('❌ Noto‘g‘ri parol. Qayta urinib ko‘ring:')
         return ENTER_PASSWORD
 
 def select_person(update, context):
     query = update.callback_query
     context.user_data['person'] = query.data
     department = context.user_data['department']
-    current_state = department_state.get(department, 7)
+    current_state = department_state.get(department, 6)
     keyboard = [
-        [InlineKeyboardButton("1-Yuqari turivch", callback_data=str(current_state))],
-        [InlineKeyboardButton("2-tashkilotlarga", callback_data=str(current_state + 1))],
+        [InlineKeyboardButton("1-Yuqori turivch", callback_data=str(current_state))],
+        [InlineKeyboardButton("2-Tashkilotlarga", callback_data=str(current_state + 1))],
         [InlineKeyboardButton("3-Tumanga", callback_data=str(current_state + 2))],
         [InlineKeyboardButton("4-Murojaat", callback_data=str(current_state + 3))]
     ]
@@ -153,62 +128,55 @@ def select_organization(update, context):
     person = context.user_data['person']
     organization = context.user_data['organization']
     record_number = f"01/{person}-{department}-{organization}-{current_number:03}"
+
     data.append({
         'Department': department,
         'Person': person,
         'Organization': organization,
         'Record Number': record_number
     })
+
     current_number += 1
     save_current_number(current_number)
-    query.edit_message_text(text=f"Yaratilgan raqam: {record_number}")
+
+    query.edit_message_text(
+        text=f"✅ *Yaratilgan raqam:* `{record_number}`\n\n"
+             f"📌 *Keyingi raqam:* `{current_number:03}`",
+        parse_mode='Markdown'
+    )
     return ConversationHandler.END
 
 def export_to_excel(update, context):
     df = pd.DataFrame(data)
-
-    # Map department codes to names for export
     department_names = {
-        '02': 'Svodniy',
-        '16': 'Buxugalteriya',
-        '15': 'O kadr',
-        '07': 'Cena',
-        '05': 'MB',
-        '06': 'Torg',
-        '03': 'Prom',
-        '10': 'Budjet',
-        '19': 'Akt',
-        '09': 'Trud',
-        '13': 'Selxoz',
-        '11': 'Uslug',
-        '08': 'Registr',
-        '04': 'Kapstroy',
-        '12': 'Socialniy',
-        '01': 'Obshiy Odel',
-        '14': 'Perepis',
-        '18': 'Yurist',
-        '20': 'Profkom',
-        '17': 'Press slujba'
+        '02': 'Svodniy', '16': 'Buxugalteriya', '15': 'O kadr', '07': 'Cena', '05': 'MB',
+        '06': 'Torg', '03': 'Prom', '10': 'Budjet', '19': 'Akt', '09': 'Trud',
+        '13': 'Selxoz', '11': 'Uslug', '08': 'Registr', '04': 'Kapstroy',
+        '12': 'Socialniy', '01': 'Obshiy Odel', '14': 'Perepis', '18': 'Yurist',
+        '20': 'Profkom', '17': 'Press slujba'
     }
 
-    # Replace department codes with names
     df['Department'] = df['Department'].map(department_names)
 
-    # Add timestamp to the filename
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filepath = os.path.join(os.getcwd(), f'records_{timestamp}.xlsx')
     df.to_excel(filepath, index=False)
-    update.message.reply_text(f"Ma'lumotlar Excel fayliga yuklandi: {filepath}")
+
+    update.message.reply_text(
+        f"📁 Ma'lumotlar Excel fayliga yuklandi: `{filepath}`\n"
+        f"📌 Oxirgi raqam: `{current_number - 1:03}`",
+        parse_mode='Markdown'
+    )
 
 def cancel(update, context):
-    update.message.reply_text('Bekor qilindi.')
+    update.message.reply_text('❌ Bekor qilindi.')
     return ConversationHandler.END
 
+# --- Main ---
 def main():
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    # Define the conversation handler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -223,7 +191,6 @@ def main():
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler('export', export_to_excel))
 
-    # Start the bot
     updater.start_polling()
     updater.idle()
 
